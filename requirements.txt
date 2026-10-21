@@ -1,0 +1,13 @@
+datasets
+transformers
+torch
+scikit-learn
+shap
+pandas
+numpy
+matplotlib
+seaborn
+jupyter
+ipykernel
+ipywidgets
+tqdm

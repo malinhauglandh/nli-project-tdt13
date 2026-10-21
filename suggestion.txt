@@ -1,0 +1,39 @@
+NLI (Natural Language Inference) - a task where you give a computer two sentences and ask: does the second sentence make sense given the first one?
+
+The setup: two sentences
+
+The first sentence is called the premise  - it’s the given fact
+The second sentence is called the hypothesis - it’s the “claim” you are checking
+
+Think of it like a logic quiz with 3 possible answers:
+
+Sentence 1: "A dog is running in the park."
+Sentence 2: "An animal is outside." → True (this follows from sentence 1)
+Sentence 2: "The dog is sleeping." → False (this contradicts sentence 1)
+Sentence 2: "The dog belongs to a child." → Unclear (could be true, but sentence 1 doesn't say)
+
+So the model is guessing whether the hypothesis (second sentence) is true, false or unknown, based on only the premise (first sentence). That is what inference means - figuring out what you can logically conclude from a given fact.  
+
+→
+
+Project proposal for TDT13 course
+Student name: Malin Haugland Høli and Ina Martini
+Task: "Investigating whether a simple model and a pretrained NLI model rely on the same word-level shortcuts, using explainability methods"
+Research questions:
+Do a simple (logistic regression) and pretrained transformer model (RoBERTa, finetuned for NLI) show similar reliance on hypothesis-only shortcuts (e.g. negation words like "not," "no," "never"), or does RoBERTa's extra capacity reduce this reliance? 
+Prior work (Poliak et al. 2018; Gururangan et al. 2018) found that even strong neural models show this bias, not just simple ones — does that hold for this specific model pair, and do explanation methods (SHAP/LIME) show the same words driving both models' decisions, or different ones? 
+Methods to use:
+Core comparison
+Train a logistic regression model (TF-IDF features) and use a pretrained RoBERTa model (roberta-large-mnli) on MLNI (premise + hypothesis → label)
+Test both on hypothesis-only input (premise removed) to measure how much accuracy survives without it, a known indicator of shortcut reliance (Poliak et al. 2018; Gururangan et al. 2018)
+Explanation comparison
+Apply SHAP or LIME to both models' predictions on the same set of test examples
+Identify each model's top-weighted words per prediction
+Compare overlap between the two models (e.g. how often "not"/"no"/"never" top the list for both, vs. cases where BERT weights the premise more)
+Dataset:
+https://huggingface.co/datasets/nyu-mll/multi_nli 
+Evaluation:
+Accuracy: full-input vs. hypothesis-only, for both models
+Macro F1 score
+Explanation overlap: how similar are the two models' top-weighted words across many examples (e.g. simple overlap counts)
+Qualitative examples: a handful of clear cases showing the shortcut in action (e.g. "not" dominating a wrong prediction)
