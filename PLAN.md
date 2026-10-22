@@ -4,7 +4,7 @@
 
 Everything lives in one notebook, `nli_shortcuts.ipynb`. Expensive results (RoBERTa predictions, SHAP values) are cached to `results/` so the notebook can be rerun without recomputing.
 
-**Status:** Steps 1–6 are done (EDA, logistic regression, RoBERTa inference, quantitative results, SHAP for both models, explanation comparison in notebook section 7). Next: Step 7 (qualitative examples), then add-on B (counterfactual negation test), which gives the causal evidence the SHAP results lack.
+**Status:** Steps 1–7 are done (EDA, logistic regression, RoBERTa inference, quantitative results, SHAP for both models, explanation comparison in notebook section 7, qualitative examples in section 8). Add-on B (counterfactual negation test) is done in section 9. Next: write the report; optional quick checks are the LR `coef × tfidf` check and add-on A.
 
 ---
 
@@ -34,7 +34,7 @@ These are methodological details that are easy to get wrong and worth a sentence
 - EDA done in the notebook (section 2):
   - Label distribution for all three splits: train exactly balanced, both validation splits ~35% entailment / 32% neutral / 33% contradiction. Majority-class baseline ≈ 0.35.
   - Mean lengths (train): premise 19.8 words, hypothesis 10.0.
-  - **Negation artifact table** (train) and the same table **across all three splits**: 22% of hypotheses contain negation, and 56–63% of those are contradictions (vs. ~25% without negation). The cue is strongest in `validation_mismatched` (63%).
+  - **Negation artifact table across all three splits** (one table; the separate train-only table was merged into it): 22% of hypotheses contain negation, and 56–63% of those are contradictions (vs. ~25% without negation). The cue is strongest in `validation_mismatched` (63%).
   - Raw counts for `validation_matched`: 2,142 negated hypotheses, of which 937 are *not* contradictions (496 entailment, 441 neutral). These are the cases where the shortcut misleads.
   - **Per-word negation table:** no-series words (*never, none, nothing, no*) are strong cues (~76–79% contradiction). *not*/*n't* are much weaker (46–51%) but make up most occurrences.
   - **Most label-revealing hypothesis words** (`MIN_DF = 500`): contradiction = negation + absolute words (*completely, hate*) + negative polarity items (*any, anything*); neutral = added reasons/details (*also, because, due*) and opinions (*popular, prefer, better*); entailment = weakest cues (≤ 0.53), hedged words (*some, sometimes, may*). *refused* (0.81, n=498) is a strong contradiction cue outside the negation list.
@@ -76,7 +76,7 @@ Main results table:
 
 Plus:
 - **Confusion matrices** for each premise-removed condition. What does each model default to without a premise?
-- **Negation subset analysis** (cheap and very telling): split the validation set by "hypothesis contains a negation word". For each model and condition, report accuracy and **P(predict contradiction)** on each subset, compared with the gold contradiction rate. This directly answers RQ1.
+- **Negation subset analysis** (cheap and very telling): split the validation set by "hypothesis contains a negation word". For each model and condition, report accuracy and **P(predict contradiction)** on each subset, compared with the true contradiction rate. This directly answers RQ1.
 - ✅ **Done** in notebook section 5 (table saved to `results/main_results.csv`). Key numbers (validation_matched):
   - Removing the premise: LR-full 0.556 → 0.531 (−2.5 points), RoBERTa 0.906 → 0.371 (−53 points).
   - P(predict contradiction | negated hypothesis): true 56%, LR-hyp 73%, LR-full 71%, RoBERTa 58%.
@@ -100,25 +100,28 @@ Plus:
 
 ### Step 6 — Explanation comparison (small) ✅ done
 Per example, then aggregated over the 300:
-- **Top-k overlap**: Jaccard similarity of each model's top-5 words (by |SHAP|). Report the mean and show a histogram.
 - **Premise share**: `sum|SHAP| over premise words / sum|SHAP| over all words`. Show a box plot per model. This tests whether RoBERTa uses the premise more.
 - **Negation dominance**: among examples with negation in the hypothesis, how often is a negation word the #1 (or top-3) word for each model, and in which direction (toward contradiction?). Show a 2×2 table: both models / only LR / only RoBERTa / neither.
 - **Globally most important words**: mean |SHAP| per word across the sample, top-15 for each model, shown side by side.
 - ✅ **Done** in notebook section 7, with an interpretation after each result and a section summary. Key numbers (300-example sample; LR 52% / RoBERTa 92% accuracy on it):
-  - **Top-5 overlap:** mean Jaccard 0.27 (about 2 of 5 words shared), the same with and without negation (0.28 vs. 0.26). Chance baselines: 0.18 for random words (exact hypergeometric + 1,000 simulations, p < 0.001); 0.24 for random words with the same premise/hypothesis split as RoBERTa's top 5 (p < 0.001). So the agreement is above chance, but mostly because both models focus on the hypothesis.
   - **Premise share:** median 14% (LR) vs. 36% (RoBERTa); RoBERTa higher in 77% of examples. Agrees with the premise ablation in Step 4.
   - **Negation dominance** (negation word = top-1): negated contradictions LR 84% / RoBERTa 94% (correct to focus on it there); **traps LR 60% / RoBERTa 12%**, LR-only in 51 of 100 traps. When negation is LR's top-1 on a trap, it answers contradiction 77% of the time; trap accuracy LR 30% vs. RoBERTa 87%.
   - **Global top-15 words:** 11 of 15 shared, *never/nothing/no* at the top for both. Only RoBERTa's list has premise negation (`P:didn't`, `P:not`, …); LR's has more non-negation hypothesis cues (*because, all, any, most, but*). The global ranking hides the trap difference, because it mixes contradictions (where negation matters) with traps (where it misleads). **Key point for the discussion:** compare explanations per example and per group, not only globally.
   - **Answer to the second half of the RQ:** SHAP shows negation words driving both models, but only for LR do they also drive wrong answers.
-  - Figures: `shap_top5_overlap.png`, `shap_premise_share.png`, `shap_top_words.png`.
+  - Figures: `shap_premise_share.png`, `shap_top_words.png`.
   - Open: bootstrap confidence intervals for the main percentages would strengthen the report. The RoBERTa trap subgroup with negation as top-1 is only 12 examples, so don't draw strong conclusions from it.
 
-### Step 7 — Qualitative examples (small)
+### Step 7 — Qualitative examples (small) ✅ done
 Pick 4–6 clear cases with a SHAP text plot or a simple coloured bar chart:
 - both models wrong, with "not" dominating (the shortcut in action)
 - LR wrong because of "not", RoBERTa right (and its attribution is on the premise)
 - a case where RoBERTa still falls for the shortcut
 - a negation-free contradiction, to show what else drives the predictions
+- ✅ **Done** in notebook section 8 (`figures/shap_qualitative_examples.png`), four examples plus the trap from section 6:
+  1. *The door did not budge.* → *The door didn't move.* (entailment): LR wrong from *didn't* (+0.65); RoBERTa right, top words premise *not* and *door*.
+  2. *…to buy cowboy boots.* → *There were not cowboy boots at the store.* (neutral): both wrong, *not* top-1 for both. RoBERTa only gets 4 traps in the sample wrong, and both "both wrong" and "RoBERTa falls for the shortcut" are these same 4, so one example covers both bullets.
+  3. *hot day* → *very cold day* (contradiction): both right; RoBERTa uses *hot*/*cold*, LR uses *very* and gives *hot* 0 (no cross-sentence features).
+  4. *Some rooms* → *All of the rooms* (contradiction): both rely on *All*; only RoBERTa also uses premise *Some*.
 
 **At this point you have a complete report.**
 
@@ -131,11 +134,11 @@ Pick 4–6 clear cases with a SHAP text plot or a simple coloured bar chart:
 3. ✅ Confusion matrices for the premise-removed conditions (`figures/confusion_matrices.png`, with and without premise).
 4. ✅ Bar chart: P(predict contradiction) on the negation and no-negation subsets, per model and condition (`figures/negation_predicted_contradiction.png`).
 5. Top LR coefficients per class (P vs. H features).
-6. ✅ Histogram of top-5 Jaccard overlap between the models (`figures/shap_top5_overlap.png`), with the chance baselines in the text.
-7. ✅ Premise-share box plot, LR vs. RoBERTa (`figures/shap_premise_share.png`).
-8. ✅ Side-by-side global top-15 SHAP words (`figures/shap_top_words.png`).
-9. Negation-dominance tables (contradictions vs. traps) from Step 6. These are the strongest SHAP result, so put them in the report as a table.
-10. 4–6 qualitative SHAP examples.
+6. ✅ Premise-share box plot, LR vs. RoBERTa (`figures/shap_premise_share.png`).
+7. ✅ Side-by-side global top-15 SHAP words (`figures/shap_top_words.png`).
+8. Negation-dominance tables (contradictions vs. traps) from Step 6. These are the strongest SHAP result, so put them in the report as a table.
+9. ✅ Qualitative SHAP examples (`figures/shap_qualitative_examples.png`).
+10. ✅ Counterfactual negation test (`figures/counterfactual_negation.png`).
 
 ---
 
@@ -151,6 +154,12 @@ Pick 4–6 clear cases with a SHAP text plot or a simple coloured bar chart:
 | F | **HANS** evaluation (McCoy et al. 2019) of both models. | Medium | Well-known challenge set for overlap heuristics. |
 | G | **Middle-sized model**: a smaller fine-tuned MNLI model (e.g. `roberta-base` / DistilRoBERTa MNLI checkpoints on HF), to show the trend with model capacity. | Medium | Turns a 2-point comparison into a capacity trend. |
 | H | **Fine-tune a hypothesis-only RoBERTa** (e.g. roberta-base, 1 epoch). | High (GPU hours) | Hypothesis-only *training* for the transformer too, making it fully comparable to LR-hyp. |
+
+**Add-on B status:** set up in notebook section 9. Edit rules: delete the negation word from hypotheses with exactly one (1,953 examples), and insert "not" after the first *be*/modal verb in hypotheses without negation (4,292). ✅ **Done**, with interpretation in the notebook (`figures/counterfactual_negation.png`, `results/roberta_counterfactual_*.npy`). Key test: does the direction of the change depend on the edit (shortcut) or on the label (reading the premise)?
+  - **LR follows the edit:** deleting negation lowers its contradiction rate for every label (51→13%, 43→13%, 87→28%), and inserting "not" raises it for every label (11→58%, 14→52%, 41→76%).
+  - **RoBERTa follows the meaning:** entailment + delete negation 1→83% contradiction (LR goes *down* 51→13%); contradiction + insert "not" 91→32% (LR goes *up* 41→76%).
+  - **Neutral is less clean than expected:** RoBERTa rises in both directions (12→38%, 5→46%). That's not the shortcut pattern, but it also doesn't show RoBERTa ignores negation. Likely cause: related neutral hypotheses can become real contradictions, plus unnatural edits. The original claim that "neutral should stay neutral" was too strong and has been corrected in the notebook.
+  - Limitations: true labels of edited examples are unknown; some edits are ungrammatical (e.g. negative polarity *any* left behind); only rule-editable examples are covered.
 
 Suggested order if time allows: **B → A**. B comes first now because the SHAP results are correlational, and B is the most direct way to show that negation *causes* LR's wrong answers on traps. A is cheap and gives a well-known extra result. C is partly done: RoBERTa logits exist for `validation_mismatched` (Step 3) and LR accuracy is almost identical there (Step 2), so only the negation subset analysis on mismatched is missing. G is the best way to address the "two models at opposite extremes" confound if there is time.
 
