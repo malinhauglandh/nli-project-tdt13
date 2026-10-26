@@ -32,7 +32,7 @@ These are methodological details that are easy to get wrong and worth a sentence
 - `pip install datasets transformers torch scikit-learn shap pandas matplotlib seaborn`
 - Load `nyu-mll/multi_nli`. No `label == -1` filtering is needed: the Hugging Face version already excludes the pairs without a gold label (392,702 / 9,815 / 9,832 examples). The paper reports about 1.8% of validation pairs without one.
 - EDA done in the notebook (section 2):
-  - Label distribution for all three splits: train exactly balanced, both validation splits ~35% entailment / 32% neutral / 33% contradiction. Majority-class baseline ≈ 0.35.
+  - Label distribution for all three splits: train almost exactly balanced (contradiction most frequent by 4 examples), both validation splits ~35% entailment / 32% neutral / 33% contradiction. Majority-class baseline uses the training majority (contradiction): ≈ 0.33.
   - Mean lengths (train): premise 19.8 words, hypothesis 10.0.
   - **Negation artifact table across all three splits** (one table; the separate train-only table was merged into it): 22% of hypotheses contain negation, and 56–63% of those are contradictions (vs. ~25% without negation). The cue is strongest in `validation_mismatched` (63%).
   - Raw counts for `validation_matched`: 2,142 negated hypotheses, of which 937 are *not* contradictions (496 entailment, 441 neutral). These are the cases where the shortcut misleads.
@@ -51,7 +51,7 @@ These are methodological details that are easy to get wrong and worth a sentence
 - ✅ **Done.** Notes:
   - The held-out 10% must be split **by premise** (`promptID`, `GroupShuffleSplit`). Each premise appears once per label, so a random split gives misleading held-out accuracy (0.41 vs. 0.55 on validation). The notebook has a check cell that shows this.
   - Best `C = 1` for both. Models cached in `results/lr_full.pkl`, `results/lr_hyp.pkl`.
-  - Validation_matched accuracy: majority 0.354, LR-hyp 0.544, LR-full 0.556 (mismatched almost identical).
+  - Validation_matched accuracy: majority 0.327, LR-hyp 0.543, LR-full 0.558 (mismatched almost identical).
   - 59/60 top coefficients are `H:` features. Contradiction: *never* (10.9), *no* (10.7) ≫ *not* (4.8).
 
 ### Step 3 — RoBERTa predictions (small–medium, GPU)
@@ -67,7 +67,7 @@ Main results table:
 
 | Model | Input at test time | Accuracy | Macro-F1 |
 |---|---|---|---|
-| Majority class | – | ~0.35 | |
+| Majority class | – | ~0.33 | |
 | LR-full | full | | |
 | LR-full | premise removed | | |
 | LR-hyp | hypothesis only (trained that way) | | |
