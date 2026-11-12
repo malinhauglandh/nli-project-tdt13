@@ -5,3 +5,4 @@ data/
 results/*.npy
 results/*.pkl
 .vscode/
+.idea/
